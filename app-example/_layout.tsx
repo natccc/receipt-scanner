@@ -30,6 +30,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="onboarding" options={{presentation:'fullScreenModal', headerShown: false, animation:'fade' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </ThemeProvider>
