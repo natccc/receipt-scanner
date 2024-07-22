@@ -5,12 +5,10 @@ import {
   Button,
   Image,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import axios from "axios";
 
 const ReceiptScannerScreen = () => {
@@ -36,18 +34,18 @@ const ReceiptScannerScreen = () => {
 
   if (!hasPermission) {
     return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: "center" }}>
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-center">
           We need your permission to show the camera
         </Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Button onPress={requestPermission} title="Grant Permission" />
       </View>
     );
   }
 
   const handleCapture = async () => {
     if (cameraRef.current) {
-      const photo = await cameraRef.current?.takePictureAsync();
+      const photo = await cameraRef.current.takePictureAsync();
       setImageUri(photo.uri);
       processImage(photo.uri);
     }
@@ -77,7 +75,7 @@ const ReceiptScannerScreen = () => {
       });
 
       const response = await axios.post(
-        "http://192.168.1.129:3000/upload",
+        "http://192.168.1.129:3000/process",
         formData,
         {
           headers: {
@@ -122,103 +120,64 @@ const ReceiptScannerScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        ref={cameraRef}
-      >
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleCapture}>
-            <Text style={styles.text}>Capture</Text>
-          </TouchableOpacity>
-        </View>
-      </CameraView>
-      {imageUri && (
-        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-      )}
-      <Text>{text}</Text>
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.itemContainer}>
-            <Text>{item.text}</Text>
-            <View style={styles.buttonGroup}>
-              <Button
-                title="Me"
-                onPress={() => categorizeItem(item.id, "me")}
-              />
-              <Button
-                title="Friend"
-                onPress={() => categorizeItem(item.id, "friend")}
-              />
-              <Button
-                title="Shared"
-                onPress={() => categorizeItem(item.id, "shared")}
-              />
-            </View>
+    <View className="flex-1 justify-center items-center p-5">
+      <View className="bg-slate-600 w-full h-full mb-4">
+        <CameraView style={{ flex: 1 }} ref={cameraRef}>
+          <View className="flex-1 flex-row justify-center items-end mb-5">
+            <TouchableOpacity
+              className="flex-1 justify-center items-center bg-white rounded p-2 m-5"
+              onPress={handleCapture}
+            >
+              <Text className="text-lg font-bold text-black">Capture</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      />
-      <View style={styles.summary}>
-        <Text>Me: ${calculateSum("me")}</Text>
-        <Text>Friend: ${calculateSum("friend")}</Text>
-        <Text>Shared: ${calculateSum("shared")}</Text>
+        </CameraView>
+      
+        <Text>{text}</Text>
+        <Button title="Pick an Image" onPress={handlePickImage} />
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View className="flex-row justify-between p-2 border-b border-gray-300">
+              <Text>{item.text}</Text>
+              <View className="flex-row">
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "me" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "me")}
+                >
+                  <Text>Me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "friend" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "friend")}
+                >
+                  <Text>Friend</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "shared" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "shared")}
+                >
+                  <Text>Shared</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        />
+        <View className="p-2 border-t border-gray-300">
+          <Text>Me: ${calculateSum("me")}</Text>
+          <Text>Friend: ${calculateSum("friend")}</Text>
+          <Text>Shared: ${calculateSum("shared")}</Text>
+        </View>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    marginBottom: 20,
-  },
-  button: {
-    flex: 0.1,
-    alignSelf: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    padding: 10,
-    margin: 20,
-  },
-  text: {
-    fontSize: 18,
-    color: "#000",
-  },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    margin: 20,
-    alignSelf: "center",
-  },
-  itemContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  buttonGroup: {
-    flexDirection: "row",
-  },
-  summary: {
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#ccc",
-  },
-});
 
 export default ReceiptScannerScreen;

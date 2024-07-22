@@ -3,9 +3,6 @@ import React from 'react';
 
 
 export default function TabLayout() {
-  const { isFirstTime, isLoading } = useFirstTimeOpen()
-  if (isLoading) return <></>
-  if (isFirstTime) return <Redirect href={"/onboarding"} />
   
   return (
     <Tabs
