@@ -1,6 +1,6 @@
-import { Slot } from "expo-router";
+// app/_layout.js
+import { Stack } from "expo-router";
 
-// Import your global CSS file
-import "../global.css";
-
-export default Slot;
+export default function Layout() {
+  return <Stack />;
+}

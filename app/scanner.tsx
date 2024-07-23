@@ -5,18 +5,20 @@ import {
   Button,
   Image,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
-  ScrollView,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
 
 const ReceiptScannerScreen = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [recognizedText, setRecognizedText] = useState<string>("");
+  const [text, setText] = useState<string>("");
+  const [items, setItems] = useState<
+    Array<{ id: string; text: string; category: string }>
+  >([]);
   const [permission, requestPermission] = useCameraPermissions();
 
   useEffect(() => {
@@ -32,8 +34,8 @@ const ReceiptScannerScreen = () => {
 
   if (!hasPermission) {
     return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: "center" }}>
+      <View className="flex-1 justify-center items-center">
+        <Text className="text-center">
           We need your permission to show the camera
         </Text>
         <Button onPress={requestPermission} title="Grant Permission" />
@@ -43,7 +45,7 @@ const ReceiptScannerScreen = () => {
 
   const handleCapture = async () => {
     if (cameraRef.current) {
-      const photo = await cameraRef.current?.takePictureAsync();
+      const photo = await cameraRef.current.takePictureAsync();
       setImageUri(photo.uri);
       processImage(photo.uri);
     }
@@ -65,83 +67,117 @@ const ReceiptScannerScreen = () => {
 
   const processImage = async (uri: string) => {
     try {
-      const result = await TextRecognition.recognize(uri);
-      setRecognizedText(result.text);
+      const formData = new FormData();
+      formData.append("image", {
+        uri,
+        type: "image/jpeg",
+        name: "photo.jpg",
+      });
 
-      console.log("Recognized text:", result.text);
-
-      for (let block of result.blocks) {
-        console.log("Block text:", block.text);
-        console.log("Block frame:", block.frame);
-
-        for (let line of block.lines) {
-          console.log("Line text:", line.text);
-          console.log("Line frame:", line.frame);
+      const response = await axios.post(
+        "http://192.168.1.129:3000/process",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-      }
-    } catch (error) {
-      console.error("Error recognizing text:", error);
+      );
+
+      setText(response.data.text);
+      parseItems(response.data.text);
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  const parseItems = (text: string) => {
+    const lines = text.split("\n");
+    const parsedItems = lines.map((line, index) => ({
+      id: index.toString(),
+      text: line,
+      category: "uncategorized",
+    }));
+    setItems(parsedItems);
+  };
+
+  const categorizeItem = (id: string, category: string) => {
+    const updatedItems = items.map((item) =>
+      item.id === id ? { ...item, category } : item
+    );
+    setItems(updatedItems);
+  };
+
+  const calculateSum = (category: string) => {
+    return items
+      .filter((item) => item.category === category)
+      .reduce(
+        (sum, item) =>
+          sum + parseFloat(item.text.match(/\d+(\.\d{1,2})?/g)?.[0] || "0"),
+        0
+      )
+      .toFixed(2);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <CameraView
-        style={styles.camera}
-        ref={cameraRef}
-      >
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.button} onPress={handleCapture}>
-            <Text style={styles.text}>Capture</Text>
-          </TouchableOpacity>
+    <View className="flex-1 justify-center items-center p-5">
+      <View className="bg-slate-600 w-full h-full mb-4">
+        <CameraView style={{ flex: 1 }} ref={cameraRef}>
+          <View className="flex-1 flex-row justify-center items-end mb-5">
+            <TouchableOpacity
+              className="flex-1 justify-center items-center bg-white rounded p-2 m-5"
+              onPress={handleCapture}
+            >
+              <Text className="text-lg font-bold text-black">Capture</Text>
+            </TouchableOpacity>
+          </View>
+        </CameraView>
+
+        <Text>{text}</Text>
+        <Button title="Pick an Image" onPress={handlePickImage} />
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View className="flex-row justify-between p-2 border-b border-gray-300">
+              <Text>{item.text}</Text>
+              <View className="flex-row">
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "me" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "me")}
+                >
+                  <Text>Me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "friend" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "friend")}
+                >
+                  <Text>Friend</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className={`mx-1 p-1 rounded border ${
+                    item.category === "shared" ? "bg-gray-300" : "bg-gray-200"
+                  }`}
+                  onPress={() => categorizeItem(item.id, "shared")}
+                >
+                  <Text>Shared</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        />
+        <View className="p-2 border-t border-gray-300">
+          <Text>Me: ${calculateSum("me")}</Text>
+          <Text>Friend: ${calculateSum("friend")}</Text>
+          <Text>Shared: ${calculateSum("shared")}</Text>
         </View>
-      </CameraView>
-      {imageUri && (
-        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-      )}
-      <Text>Recognized Text:</Text>
-      <Text>{recognizedText}</Text>
-      <Button title="Pick an Image" onPress={handlePickImage} />
-    </ScrollView>
+      </View>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  camera: {
-    width: "100%",
-    height: 400,
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    marginBottom: 20,
-  },
-  button: {
-    flex: 0.1,
-    alignSelf: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 5,
-    padding: 10,
-    margin: 20,
-  },
-  text: {
-    fontSize: 18,
-    color: "#000",
-  },
-  imagePreview: {
-    width: 200,
-    height: 200,
-    margin: 20,
-  },
-});
 
 export default ReceiptScannerScreen;
