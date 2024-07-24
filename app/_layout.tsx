@@ -1,6 +1,10 @@
-// app/_layout.js
-import { Stack } from "expo-router";
+import { Stack, Tabs } from "expo-router";
+import React from "react";
 
-export default function Layout() {
-  return <Stack />;
+export default function RootLayout() {
+  return (
+    <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    </Stack>
+  );
 }

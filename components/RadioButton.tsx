@@ -25,7 +25,7 @@ const RadioButton: React.FC<RadioButtonProps> = ({
 
 const styles = StyleSheet.create({
   radioButton: {
-    marginHorizontal: 12, // Add horizontal margin to create space between buttons
+    marginHorizontal: 12, 
   },
   outerCircle: {
     height: 20,

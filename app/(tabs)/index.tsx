@@ -1,14 +1,23 @@
 import { View, Text, StyleSheet, TextInput, TouchableOpacity } from "react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
+import { createTable } from "@/database";
 
 
 export default function App() {
-  const [text, setText] = useState("");
+  useEffect(() => {
+    const initDB = async () => {
+      await createTable();
+    };
+    initDB().catch(console.error);
+  }, []);
+  
+  const [textInput, setTextInput] = useState("");
   const router = useRouter();
  const handlePress = () => {
-   router.push({ pathname: "result", params: { text } });
+   router.push({ pathname: "result", params: { textInput } });
  };
+  console.log('loading')
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Paste your receipt here</Text>
@@ -17,8 +26,8 @@ export default function App() {
         placeholder="Enter receipt data"
         multiline
         numberOfLines={10}
-        onChangeText={(text) => setText(text)}
-        value={text}
+        onChangeText={(textInput) => setTextInput(textInput)}
+        value={textInput}
       />
       <TouchableOpacity onPress={handlePress}>
         <Text style={styles.button}>Submit</Text>

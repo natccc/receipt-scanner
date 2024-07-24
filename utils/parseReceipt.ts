@@ -1,4 +1,3 @@
-const { data, data2, data3 } = require("../data");
 
 export interface ReceiptItemProps{
   name: string;
@@ -80,6 +79,4 @@ export const parseReceipt = (
   return { items, outcome };
 };
 
-const result = parseReceipt(data);
 
-console.log(result);
