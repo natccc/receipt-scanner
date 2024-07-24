@@ -1,31 +1,42 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
-import { loadData, CategorizedReceiptItem } from "../../database";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { loadDataByDate, CategorizedReceiptItem } from "@/database";
 
 export default function History() {
-  const [items, setItems] = useState<CategorizedReceiptItem[]>([]);
+  const [data, setData] = useState<{ [key: string]: CategorizedReceiptItem[] }>(
+    {}
+  );
+  const router = useRouter();
 
   useEffect(() => {
-    loadData((loadedItems) => {
-      setItems(loadedItems);
+    loadDataByDate((loadedData) => {
+      setData(loadedData);
     });
   }, []);
 
-  const renderItem = ({ item }: { item: CategorizedReceiptItem }) => (
-    <View style={styles.item}>
-      <Text style={styles.itemText}>
-        {item.name} | £{item.price.toFixed(2)} | {item.category}
-      </Text>
-    </View>
+  const renderDateItem = ({ item }: { item: string }) => (
+    <TouchableOpacity
+      style={styles.item}
+      onPress={() => router.push(`/date/${encodeURIComponent(item)}`)}
+    >
+      <Text style={styles.itemText}>{item}</Text>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>History</Text>
       <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        data={Object.keys(data)}
+        renderItem={renderDateItem}
+        keyExtractor={(item) => item}
       />
     </View>
   );

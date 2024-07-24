@@ -5,7 +5,7 @@ import RadioButton from "@/components/RadioButton";
 import { useLocalSearchParams } from "expo-router";
 import {
   saveData,
-  loadData,
+  loadDataByDate,
   deleteAllData,
   CategorizedReceiptItem,
 } from "@/database";
@@ -34,19 +34,22 @@ const calculateCategoryTotal = (
 
 export default function ResultScreen() {
   // const { data } = require("../data");
-  const { textInput } = useLocalSearchParams();
+  const { textInput=''} = useLocalSearchParams<{ textInput?: string }>();
   const result = parseReceipt(textInput);
   const [categorizedItems, setCategorizedItems] = useState<
     CategorizedReceiptItem[]
   >(result.items.map((item) => ({ ...item, category: "Shared" })));
+  const { date } = useLocalSearchParams<{ date: string }>();
 
-    useEffect(() => {
-      loadData((loadedItems) => {
-        if (loadedItems.length > 0) {
-          setCategorizedItems(loadedItems);
-        }
-      }).catch(console.error);
-    }, []);
+useEffect(() => {
+  loadDataByDate((loadedItems) => {
+    const decodedDate = decodeURIComponent(date!);
+    if (loadedItems[decodedDate] && loadedItems[decodedDate].length > 0) {
+      setCategorizedItems(loadedItems[decodedDate]);
+    }
+  });
+}, [date]);
+
   
   const categorizeItem = (index: number, category: string) => {
     const newItems = [...categorizedItems];

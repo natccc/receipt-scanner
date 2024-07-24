@@ -15,17 +15,23 @@ export interface CategorizedReceiptItem {
 
 // Function to create the table if it doesn't exist
 export const createTable = async (): Promise<void> => {
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      price REAL NOT NULL,
-      category TEXT NOT NULL,
-      timestamp TEXT NOT NULL
-
-    );
-  `);
+  try {
+    // await db.execAsync("DROP TABLE IF EXISTS items");
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        price REAL NOT NULL,
+        category TEXT NOT NULL,
+        timestamp TEXT NOT NULL
+      );
+    `);
+    console.log("Table created successfully");
+  } catch (error) {
+    console.error("Error creating table:", error);
+  }
 };
+
 
 // Function to save data to the table
 export const saveData = async (
@@ -34,19 +40,33 @@ export const saveData = async (
   category: string
 ): Promise<void> => {
   const timestamp = format(new Date(), "dd/MM/yyyy HH:mm"); 
-  await db.runAsync(
-    "INSERT INTO items (name, price, category) VALUES (?, ?, ?)",
-    [name, price, category]
-  );
+    await db.runAsync(
+      "INSERT INTO items (name, price, category, timestamp) VALUES (?, ?, ?, ?)",
+      [name, price, category, timestamp]
+    );
+
 };
 
-// Function to load data from the table
-export const loadData = async (
-  callback: (items: CategorizedReceiptItem[]) => void
+
+export const loadDataByDate = async (
+  callback: (items: { [key: string]: CategorizedReceiptItem[] }) => void
 ): Promise<void> => {
-  const allRows = await db.getAllAsync("SELECT * FROM items");
-  callback(allRows as CategorizedReceiptItem[]);
+  const allRows: CategorizedReceiptItem[] = await db.getAllAsync(
+    "SELECT * FROM items ORDER BY timestamp DESC"
+  );
+  const groupedData = allRows.reduce<{
+    [key: string]: CategorizedReceiptItem[];
+  }>((acc, item) => {
+    const timestamp = item.timestamp!
+    if (!acc[timestamp]) {
+      acc[timestamp] = [];
+    }
+    acc[timestamp].push(item);
+    return acc;
+  }, {});
+  callback(groupedData);
 };
+
 
 // Function to delete all data from the table
 export const deleteAllData = async (): Promise<void> => {

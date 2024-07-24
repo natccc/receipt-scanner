@@ -17,7 +17,6 @@ export default function App() {
  const handlePress = () => {
    router.push({ pathname: "result", params: { textInput } });
  };
-  console.log('loading')
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Paste your receipt here</Text>
