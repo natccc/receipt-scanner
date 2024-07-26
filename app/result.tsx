@@ -5,6 +5,7 @@ import RadioButton from "@/components/RadioButton";
 import { useLocalSearchParams } from "expo-router";
 import {
   saveData,
+  saveReceiptSummary,
   loadDataByDate,
   deleteAllData,
   CategorizedReceiptItem,
@@ -59,7 +60,15 @@ useEffect(() => {
 
   const saveDataToDB = async () => {
     try {
-      // await deleteAllData();
+      const total = parseFloat(calculateTotal(categorizedItems));
+       const categoryTotals = categories.reduce((acc, category) => {
+         acc[category.label] = parseFloat(
+           calculateCategoryTotal(categorizedItems, category.label)
+         );
+         return acc;
+       }, {} as { [key: string]: number });
+
+       await saveReceiptSummary(total, categoryTotals);
       for (const item of categorizedItems) {
         await saveData(item.name, item.price, item.category);
       }

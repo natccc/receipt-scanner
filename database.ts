@@ -12,13 +12,24 @@ export interface CategorizedReceiptItem {
   category: string;
   timestamp?: string;
 }
+export interface ReceiptSummary {
+  id?: number;
+  timestamp: string;
+  total: number;
+  categoryTotals: string; 
+}
+export const selectAll = async (date) => {
+  console.log(date,"date in db")
+  const result = await db.getAllAsync('SELECT * FROM receiptSummary WHERE timestamp = ?',[date]); 
+}
+  
 
 // Function to create the table if it doesn't exist
 export const createTable = async (): Promise<void> => {
   try {
-    // await db.execAsync("DROP TABLE IF EXISTS items");
+    // await db.execAsync("DROP TABLE IF EXISTS categorizedItems");
     await db.execAsync(`
-      CREATE TABLE IF NOT EXISTS items (
+      CREATE TABLE IF NOT EXISTS categorizedItems (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         price REAL NOT NULL,
@@ -26,9 +37,20 @@ export const createTable = async (): Promise<void> => {
         timestamp TEXT NOT NULL
       );
     `);
+
+     await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS receiptSummary (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        total REAL NOT NULL,
+        categoryTotals TEXT NOT NULL
+      );
+    `);
+
+
     console.log("Table created successfully");
   } catch (error) {
-    console.error("Error creating table:", error);
+    console.error("Error creating tables:", error);
   }
 };
 
@@ -41,18 +63,29 @@ export const saveData = async (
 ): Promise<void> => {
   const timestamp = format(new Date(), "dd/MM/yyyy HH:mm"); 
     await db.runAsync(
-      "INSERT INTO items (name, price, category, timestamp) VALUES (?, ?, ?, ?)",
+      "INSERT INTO categorizedItems (name, price, category, timestamp) VALUES (?, ?, ?, ?)",
       [name, price, category, timestamp]
     );
 
 };
 
+export const saveReceiptSummary = async (
+  total: number,
+  categoryTotals: { [key: string]: number }
+): Promise<void> => {
+    const timestamp = format(new Date(), "dd/MM/yyyy HH:mm"); 
+  const categoryTotalsJson = JSON.stringify(categoryTotals);
+  await db.runAsync(
+    "INSERT INTO receiptSummary (timestamp, total, categoryTotals) VALUES (?, ?, ?)",
+    [timestamp, total, categoryTotalsJson]
+  );
+};
 
 export const loadDataByDate = async (
-  callback: (items: { [key: string]: CategorizedReceiptItem[] }) => void
+  callback: (categorizedItems: { [key: string]: CategorizedReceiptItem[] }) => void
 ): Promise<void> => {
   const allRows: CategorizedReceiptItem[] = await db.getAllAsync(
-    "SELECT * FROM items ORDER BY timestamp DESC"
+    "SELECT * FROM categorizedItems ORDER BY timestamp DESC"
   );
   const groupedData = allRows.reduce<{
     [key: string]: CategorizedReceiptItem[];
@@ -67,8 +100,15 @@ export const loadDataByDate = async (
   callback(groupedData);
 };
 
-
+export const loadReceiptSummaries = async (
+ date: string, callback: (summaries: ReceiptSummary[]) => void
+): Promise<void> => {
+  const summaries: ReceiptSummary[] = await db.getAllAsync(
+    "SELECT * FROM receiptSummary WHERE timestamp = ?",[date]
+  );
+  callback(summaries);
+};
 // Function to delete all data from the table
 export const deleteAllData = async (): Promise<void> => {
-  await db.runAsync("DELETE FROM items");
+  await db.runAsync("DELETE FROM categorizedItems");
 };
